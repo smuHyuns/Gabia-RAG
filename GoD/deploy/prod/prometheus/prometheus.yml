@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: 'server'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['god-server:8888']
+
+  - job_name: 'qdrant'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['qdrant:6333']
+
+  - job_name: 'rabbitmq'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['rabbitmq:15692']
+
+  - job_name: 'host'
+    metrics_path: '/metrics'
+    static_configs:
+        - targets: ['10.12.204.20:9100']

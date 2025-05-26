@@ -1,0 +1,69 @@
+spring:
+  profiles:
+    active: local
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: local
+
+---
+
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+---
+
+
+
+spring:
+  servlet:
+    multipart:
+      max-file-size: 500MB
+      max-request-size: 500MB
+
+  codec:
+    max-in-memory-size: 300MB
+
+  upload:
+    buffer-size: 100
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: genieofdocument@gmail.com
+    password: oyie wbuf lrmi dwjk
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  rabbitmq:
+    listener:
+      simple:
+        prefetch: 50
+
+  webflux-concurrency:
+    document: 4
+    documentMail: 2
+    parsing: 8
+    embedding: 8
+
+  webflux-buffer:
+    docs-upload: 100
+    qdrant-docs: 50
+    embedding-docs: 50
+
+llm:
+  model:
+    embedding: text-embedding-3-large
+    generate: gpt-4.1
+  prompting:
+    path: classpath:rag-prompt.yml
+

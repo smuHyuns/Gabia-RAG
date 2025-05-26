@@ -1,0 +1,179 @@
+services:
+  message-q:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    hostname: rabbitmq-host
+    networks:
+      - dnetwork
+    ports:
+      - "5672:5672"    # AMQP
+      - "15672:15672"  # Management UI
+      - "15692:15692"  # Metric
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "rabbitmqctl", "status" ]
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  vector-db:
+    image: qdrant/qdrant:v1.7.3
+    container_name: qdrant
+    networks:
+      - dnetwork
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_storage:/qdrant/storage
+    restart: unless-stopped
+    environment:
+      QDRANT__STORAGE__PERFORMANCE__OPTIMIZERS__MEMMAP_THRESHOLD_KB: 1024
+      QDRANT__STORAGE__PERFORMANCE__MAX_SEARCH_THREADS: 4
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:6333/healthz || exit 1" ]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  server:
+    image: dlawjddn/god:2.0.0
+    container_name: god-server
+    networks:
+      - dnetwork
+    ports:
+      - "8080:8080"  # API 서버 포트
+      - "8888:8888"  # Actuator 포트
+    command: [ "java", "-Duser.timezone=Asia/Seoul", "-jar", "/app.jar" ]
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8888/actuator/health || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      message-q:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  document:
+    image: dlawjddn/god-document:1.0.0
+    container_name: god-document
+    networks:
+      - dnetwork
+    ports:
+      - "8000:8000"
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -f http://localhost:8000/ || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      message-q:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    privileged: true  # optional, but helps with metrics collection
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    networks:
+      - dnetwork
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.external-url=/prometheus" # Nginx에 담긴 클라이언트 정적 리소스와 path가 겹쳐서 인식하지 못하는 문제 발생 -> prefix를 더해서 문제 해결
+      - "--web.route-prefix=/prometheus" # # Nginx에 담긴 클라이언트 정적 리소스와 path가 겹쳐서 인식하지 못하는 문제 발생 -> prefix를 더해서 문제 해결
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:9090/prometheus/-/healthy" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      server:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    user: "472"
+    networks:
+      - dnetwork
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana:/var/lib/grafana
+    environment:
+      - GF_SERVER_ROOT_URL=http://139.150.72.182/grafana
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://localhost:3000/api/health" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    depends_on:
+      prometheus:
+        condition: service_healthy
+
+
+  nginx:
+    image: dlawjddn/god-client:0.0.1
+    container_name: nginx
+    networks:
+      - dnetwork
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx_conf:/etc/nginx/conf.d
+    command: [ "/bin/sh", "-c", "nginx -t && nginx -g 'daemon off;'" ]
+    depends_on:
+      server:
+        condition: service_healthy
+      grafana:
+        condition: service_healthy
+      document:
+        condition: service_healthy
+
+  redis:
+    image: redis:7.2-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - dnetwork
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+networks:
+  dnetwork:
+    name: dnetwork
+    driver: bridge
+
+volumes:
+  qdrant_storage:

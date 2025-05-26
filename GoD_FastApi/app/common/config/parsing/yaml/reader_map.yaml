@@ -1,0 +1,5 @@
+reader_map:
+   csv: read_csv
+   tsv: read_csv_tsv
+   xlsx: read_excel
+   json: read_json

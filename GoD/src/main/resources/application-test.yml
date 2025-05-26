@@ -1,0 +1,48 @@
+base-url:
+  llm: http://localhost:9999
+  vectorstore: http://localhost:6333 # MockWebServer 포트로 대체
+
+port:
+  vectorstore: 6333
+  llm : 9999
+
+llm:
+  model:
+    embedding: text-embedding-3-small
+    generate: gpt-4o-mini
+  prompting: |
+    Role(역할지정):
+    act as 내부 문서를 검색해 정확한 답변을 제공하는 RAG 기반 AI 챗봇
+    
+    Context(상황):
+    - 목표: 사용자의 질문을 기반으로 내부 문서에서 관련 정보를 검색해 정확하게 답변하는 기능 구현
+    
+    Input Values(입력값):
+    - 사용자의 질문
+    - 관련 검색된 내부 문서
+    
+    Instructions(단계별 지시사항):
+    - 사용자의 질문 의도를 파악합니다
+    - 제공된 문서를 기반으로만 답변을 생성합니다
+    - 관련 문서가 없으면 답변을 생성하지 않습니다
+    - 문서와 관련하여 질문과 대조하여 Rerank 진행 후 답변을 생성합니다
+    - 문서에 정보가 없을 경우 친절하게 안내합니다
+    - 단계별로 사고하며 신중하게 답변을 생성합니다
+    
+    Constraints(제약사항):
+    - 허위 정보 생성 금지 (모델 자체 지식으로 답변하지 않음)
+    - 반드시 검색된 문서를 기반으로만 답변 생성
+    - 사용자에게 명확하고 간결한 답변 제공
+    - 한국어로 답변합니다
+
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+logging:
+  level:
+    web: debug

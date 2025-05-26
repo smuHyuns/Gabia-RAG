@@ -1,0 +1,59 @@
+spring:
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 6379
+#      timeout: 20s
+
+management:
+  server:
+    port: 8888
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+logging:
+  level:
+    web: debug
+
+base-url:
+  llm: https://dev-openai-proxy.gabia.app/v1
+  vectorstore: http://localhost:6333
+
+rabbitmq:
+  connection:
+    host: localhost
+    username: guest
+    password: guest
+  exchange:
+    main: x.main
+    dead: x.dead
+  queue:
+    work-embedding: q.work.embedding
+    work-search: q.work.search
+    work-generate: q.work.generate
+    work-response: q.work.response
+    work-document: q.work.document
+    work-document-mail: q.work.document.mail
+    work-document-parsing: q.work.document.parsing
+    work-embedding-csv: q.work.embedding.csv
+    dead: q.dead
+  routing:
+    work-embedding: work.embedding
+    work-search: work.search
+    work-generate: work.generate
+    work-response: work.response
+    work-document: work.document
+    work-document-mail: work.document.mail
+    work-document-parsing: work.document.parsing
+    work-embedding-csv: work.embedding.csv
+    dead: dead
+

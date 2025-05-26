@@ -1,0 +1,14 @@
+default_mode: basic_xlsx
+
+mode_mappings:
+   basic_xlsx:
+      question_fields: ["subject"]
+      answer_fields: ["content"]
+
+   basic_csv:
+      question_fields: ["question"]
+      answer_fields: ["answer"]
+
+   pair_xlsx:
+      question_fields: ["subject", "contents"]
+      answer_fields: ["subject.1", "contents.1"]
